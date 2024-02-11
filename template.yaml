@@ -1,0 +1,162 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  alarm-craft automated execution stack
+
+# ------------------------------------------------------------#
+# Input Parameters
+# ------------------------------------------------------------#
+Parameters:
+  CodeBuildName:
+    Type: String
+    Default: "codebuild-alarm-craft"
+
+  EventName:
+    Type: String
+    Default: "event-codepipeline-trigger-alarm-craft"
+
+  SNSTopicName:
+    Type: String
+    Default: "sns-topic-alarm-notification"
+
+  LogGroupRetentionInDays:
+    Type: Number
+    Default: "60"
+
+  AlarmConfigRepositoryCloneUrl:
+    Type: String
+
+  BranchNameAlarmConfig:
+    Type: String
+
+  EventSourcePipelineNames:
+    Type: CommaDelimitedList
+
+Resources:
+
+  # ------------------------------------------------------------#
+  #  CodeBuild
+  # ------------------------------------------------------------#
+  BuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref CodeBuildName
+      ServiceRole: !GetAtt AlarmCraftCodeBuildRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: ARM_LAMBDA_CONTAINER
+        ComputeType: BUILD_LAMBDA_1GB
+        Image: aws/codebuild/amazonlinux-aarch64-lambda-standard:python3.12
+        EnvironmentVariables:
+          - Name: topic
+            Type: PLAINTEXT
+            Value: !GetAtt SNSTopic.TopicArn
+      Source:
+        Type: GITHUB
+        Location: !Ref AlarmConfigRepositoryCloneUrl
+        GitCloneDepth: 1
+      SourceVersion: !Ref BranchNameAlarmConfig
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+
+  # ------------------------------------------------------------#
+  #  Log Group
+  # ------------------------------------------------------------#
+  CodeBuildLogGroup:
+    Type: AWS::Logs::LogGroup
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      LogGroupName: !Sub "/aws/codebuild/${BuildProject}"
+      RetentionInDays: !Ref LogGroupRetentionInDays
+
+  # ------------------------------------------------------------#
+  #  EventBridge
+  # ------------------------------------------------------------#
+  EventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Ref EventName
+      EventPattern:
+        source:
+          - aws.codepipeline
+        detail-type:
+          - CodePipeline Pipeline Execution State Change
+        detail:
+          pipeline: !Ref EventSourcePipelineNames
+          state:
+            - "SUCCEEDED"
+      Targets:
+        - Id: run-alarm-craft
+          Arn: !Sub "arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/${BuildProject}"          
+          RoleArn: !GetAtt EventBridgeRole.Arn
+
+  # ------------------------------------------------------------#
+  #  SNS
+  # ------------------------------------------------------------#
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Ref SNSTopicName
+
+  # ------------------------------------------------------------#
+  #  IAM
+  # ------------------------------------------------------------#
+  EventBridgeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyName: EventBridgeAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: CodeBuild
+                Effect: Allow
+                Action:
+                  - codebuild:*
+                Resource: "*"
+
+  AlarmCraftCodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+      Path: /
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Sid: CloudWatchLogsAccess
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - "*"
+              - Sid: AlarmCraftAccess
+                Effect: Allow
+                Action:
+                  - resourcegroupstaggingapi:GetResources
+                  - apigateway:Get
+                  - cloudwatch:DescribeAlarms
+                  - cloudwatch:PutMetricAlarm
+                  - cloudwatch:DeleteAlarms
+                  - tag:GetResources
+                Resource: "*"
+
