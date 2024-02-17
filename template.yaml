@@ -28,8 +28,9 @@ Parameters:
   BranchNameAlarmConfig:
     Type: String
 
-  EventSourcePipelineNames:
-    Type: CommaDelimitedList
+  EventSourceCfnStackNamePrefix:
+    Type: String
+    Default: ""    
 
 Resources:
 
@@ -80,13 +81,17 @@ Resources:
       Name: !Ref EventName
       EventPattern:
         source:
-          - aws.codepipeline
+          - aws.cloudformation
         detail-type:
-          - CodePipeline Pipeline Execution State Change
+          - CloudFormation Stack Status Change
         detail:
-          pipeline: !Ref EventSourcePipelineNames
-          state:
-            - "SUCCEEDED"
+          stack-id:
+            - prefix: !Sub "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${EventSourceCfnStackNamePrefix}"
+          status-details:
+            status:
+              - CREATE_COMPLETE
+              - UPDATE_COMPLETE
+              - DELETE_COMPLETE
       Targets:
         - Id: run-alarm-craft
           Arn: !Sub "arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/${BuildProject}"          

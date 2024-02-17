@@ -7,5 +7,5 @@ region = "ap-northeast-1"
 profile = "stg2023-admin"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "CodeBuildName=\"codebuild-alarm-craft\" EventName=\"event-codepipeline-trigger-alarm-craft\" SNSTopicName=\"sns-topic-alarm-notification\" LogGroupRetentionInDays=\"60\" AlarmConfigRepositoryCloneUrl=\"https://github.com/ryo-murai/alarm-craft-autorun-codebuild.git\" BranchNameAlarmConfig=\"main\" EventSourcePipelineNames=\"\""
+parameter_overrides = "CodeBuildName=\"codebuild-alarm-craft\" EventName=\"event-cfnstack-trigger-alarm-craft\" SNSTopicName=\"sns-topic-alarm-notification\" LogGroupRetentionInDays=\"5\" AlarmConfigRepositoryCloneUrl=\"https://github.com/ryo-murai/alarm-craft-autorun-codebuild.git\" BranchNameAlarmConfig=\"main\" EventSourceCfnStackNamePrefix=\"health\""
 image_repositories = []
