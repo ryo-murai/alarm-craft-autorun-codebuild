@@ -28,6 +28,10 @@ Parameters:
   BranchNameAlarmConfig:
     Type: String
 
+  AlarmCraftAdditionalOptions:
+    Type: String
+    Default: ""
+
   EventSourceCfnStackNamePrefix:
     Type: String
     Default: ""    
@@ -52,6 +56,9 @@ Resources:
           - Name: topic
             Type: PLAINTEXT
             Value: !GetAtt SNSTopic.TopicArn
+          - Name: alarmcraft_opts
+            Type: PLAINTEXT
+            Value: !Ref AlarmCraftAdditionalOptions
       Source:
         Type: GITHUB
         Location: !Ref AlarmConfigRepositoryCloneUrl

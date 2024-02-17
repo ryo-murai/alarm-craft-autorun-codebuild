@@ -4,4 +4,4 @@ phases:
   build:
     commands:
     - python -m pip install alarm-craft
-    - alarm-craft -f -n ${topic}
+    - alarm-craft -f -n ${topic} ${alarmcraft_opts}
