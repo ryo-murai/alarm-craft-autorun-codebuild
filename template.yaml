@@ -14,13 +14,26 @@ Parameters:
     Type: String
     Default: "event-codepipeline-trigger-alarm-craft"
 
-  SNSTopicName:
+  AlarmNotifSNSTopicArn:
     Type: String
-    Default: "sns-topic-alarm-notification"
+    Default: ""
 
   LogGroupRetentionInDays:
     Type: Number
     Default: "60"
+
+  AlarmConfigRepositoryType:
+    Type: String
+    AllowedValues:
+      - GITHUB
+      - BITBUCKET
+      - CODECOMMIT
+      - CODEPIPELINE
+      - GITHUB
+      - GITHUB_ENTERPRISE
+      - NO_SOURCE
+      - S3
+    Default: GITHUB
 
   AlarmConfigRepositoryCloneUrl:
     Type: String
@@ -35,6 +48,11 @@ Parameters:
   EventSourceCfnStackNamePrefix:
     Type: String
     Default: ""    
+
+Conditions:
+  CreateSNSTopic: !Equals
+    - !Ref AlarmNotifSNSTopicArn
+    - ""
 
 Resources:
 
@@ -55,12 +73,15 @@ Resources:
         EnvironmentVariables:
           - Name: topic
             Type: PLAINTEXT
-            Value: !GetAtt SNSTopic.TopicArn
+            Value: !If
+              - CreateSNSTopic
+              - !GetAtt SNSTopic.TopicArn
+              - !Ref AlarmNotifSNSTopicArn
           - Name: alarmcraft_opts
             Type: PLAINTEXT
             Value: !Ref AlarmCraftAdditionalOptions
       Source:
-        Type: GITHUB
+        Type: !Ref AlarmConfigRepositoryType
         Location: !Ref AlarmConfigRepositoryCloneUrl
         GitCloneDepth: 1
       SourceVersion: !Ref BranchNameAlarmConfig
@@ -108,9 +129,8 @@ Resources:
   #  SNS
   # ------------------------------------------------------------#
   SNSTopic:
+    Condition: CreateSNSTopic
     Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Ref SNSTopicName
 
   # ------------------------------------------------------------#
   #  IAM
