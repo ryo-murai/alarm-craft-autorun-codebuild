@@ -49,6 +49,13 @@ Parameters:
     Type: String
     Default: ""    
 
+  EventStatus:
+    Type: String
+    AllowedValues:
+      - DISABLED
+      - ENABLED
+    Default: DISABLED
+
 Conditions:
   CreateSNSTopic: !Equals
     - !Ref AlarmNotifSNSTopicArn
@@ -120,6 +127,7 @@ Resources:
               - CREATE_COMPLETE
               - UPDATE_COMPLETE
               - DELETE_COMPLETE
+      State: !Ref EventStatus
       Targets:
         - Id: run-alarm-craft
           Arn: !Sub "arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:project/${BuildProject}"          
