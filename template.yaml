@@ -101,8 +101,8 @@ Resources:
   # ------------------------------------------------------------#
   CodeBuildLogGroup:
     Type: AWS::Logs::LogGroup
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
     Properties:
       LogGroupName: !Sub "/aws/codebuild/${BuildProject}"
       RetentionInDays: !Ref LogGroupRetentionInDays
