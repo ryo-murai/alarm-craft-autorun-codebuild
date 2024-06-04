@@ -200,3 +200,7 @@ Resources:
                   - tag:GetResources
                 Resource: "*"
 
+Outputs:
+  SNSTopic:
+    Condition: CreateSNSTopic
+    Value: !Ref SNSTopic
